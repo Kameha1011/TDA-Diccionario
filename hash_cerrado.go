@@ -115,9 +115,9 @@ func (hash *hashCerrado[K, V]) Obtener(clave K) V {
 
 func (hash *hashCerrado[K, V]) Borrar(clave K) V {
 	panicClaveNoPertenece(hash, clave)
-	if float64(hash.cantidad+hash.borrados)/float64(hash.tam) < 1-_CRITERIO_REDIMENSION && hash.tam/2 > _TAM_INICIAL {
-		redimensionar(hash, hash.tam/2)
-	}
+	// if float64(hash.cantidad+hash.borrados)/float64(hash.tam) < 1-_CRITERIO_REDIMENSION && hash.tam/2 > _TAM_INICIAL {
+	// 	redimensionar(hash, hash.tam/2)
+	// }
 	indice, _ := buscar(hash.tabla, hash.tam, clave)
 	hash.tabla[indice].estado = _BORRADO
 	hash.cantidad--
@@ -158,6 +158,7 @@ func panicIteradorTerminoDeIterar[K comparable, V any](iter *iterDiccionario[K, 
 func crearIteradorDiccionario[K comparable, V any](hash *hashCerrado[K, V]) *iterDiccionario[K, V] {
 	iter := new(iterDiccionario[K, V])
 	iter.hash = hash
+	iter.actual = 0
 	if iter.HaySiguiente() {
 		iter.Siguiente()
 	}
@@ -171,7 +172,7 @@ func (iter *iterDiccionario[K, V]) HaySiguiente() bool {
 func (iter *iterDiccionario[K, V]) Siguiente() {
 	panicIteradorTerminoDeIterar(iter)
 	iter.actual++
-	for iter.actual < iter.hash.tam && iter.hash.tabla[iter.actual].estado != _OCUPADO {
+	for iter.HaySiguiente() && iter.hash.tabla[iter.actual].estado != _OCUPADO {
 		iter.actual++
 	}
 
