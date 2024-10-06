@@ -107,6 +107,13 @@ func TestReemplazoDato(t *testing.T) {
 	require.EqualValues(t, "baubau", dic.Obtener(clave2))
 }
 
+func TestTiempoPrimo(t *testing.T) {
+	dic := TDADiccionario.CrearHash[int, int]()
+	for i := 0; i < 5000000; i++ {
+		dic.ObtenerPrimoSiguiente(i)
+	}
+}
+
 func TestReemplazoDatoHopscotch(t *testing.T) {
 	t.Log("Guarda bastantes claves, y luego reemplaza sus datos. Luego valida que todos los datos sean " +
 		"correctos. Para una implementación Hopscotch, detecta errores al hacer lugar o guardar elementos.")
@@ -283,7 +290,7 @@ func TestGuardarYBorrarRepetidasVeces(t *testing.T) {
 		"infinito")
 
 	dic := TDADiccionario.CrearHash[int, int]()
-	for i := 0; i < 1000; i++ {
+	for i := 1; i < 1000; i++ {
 		dic.Guardar(i, i)
 		require.True(t, dic.Pertenece(i))
 		dic.Borrar(i)

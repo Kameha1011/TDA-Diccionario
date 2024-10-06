@@ -25,6 +25,8 @@ type Diccionario[K comparable, V any] interface {
 
 	// Iterador devuelve un IterDiccionario para este Diccionario
 	Iterador() IterDiccionario[K, V]
+
+	ObtenerPrimoSiguiente(N int) int
 }
 
 type IterDiccionario[K comparable, V any] interface {
