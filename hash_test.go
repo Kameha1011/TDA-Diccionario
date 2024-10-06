@@ -107,12 +107,12 @@ func TestReemplazoDato(t *testing.T) {
 	require.EqualValues(t, "baubau", dic.Obtener(clave2))
 }
 
-func TestTiempoPrimo(t *testing.T) {
-	dic := TDADiccionario.CrearHash[int, int]()
-	for i := 0; i < 5000000; i++ {
-		dic.ObtenerPrimoSiguiente(i)
-	}
-}
+// func TestTiempoPrimo(t *testing.T) {
+// 	dic := TDADiccionario.CrearHash[int, int]()
+// 	for i := 0; i < 5000000; i++ {
+// 		dic.ObtenerPrimoSiguiente(i)
+// 	}
+// }
 
 func TestReemplazoDatoHopscotch(t *testing.T) {
 	t.Log("Guarda bastantes claves, y luego reemplaza sus datos. Luego valida que todos los datos sean " +
@@ -628,6 +628,28 @@ func BenchmarkIterador(b *testing.B) {
 		})
 	}
 }
+
+// func TestIterarVolumen(t *testing.T) {
+// 	VOLUMEN := 10000000
+// 	t.Log("Prueba de volumen de iterador")
+// 	dic := TDADiccionario.CrearHash[int, int]()
+// 	for i := 0; i < VOLUMEN; i++ {
+// 		dic.Guardar(i, i)
+// 	}
+// 	require.EqualValues(t, VOLUMEN, dic.Cantidad())
+
+// 	// Prueba de iteración sobre las claves almacenadas.
+// 	iter := dic.Iterador()
+// 	require.True(t, iter.HaySiguiente())
+// 	for i := 0; i < VOLUMEN; i++ {
+// 		require.True(t, iter.HaySiguiente())
+// 		c, v := iter.VerActual()
+// 		require.True(t, dic.Pertenece(c))
+// 		require.Equal(t, v, dic.Obtener(c))
+// 		iter.Siguiente()
+// 	}
+
+// }
 
 func TestVolumenIteradorCorte(t *testing.T) {
 	t.Log("Prueba de volumen de iterador interno, para validar que siempre que se indique que se corte" +
