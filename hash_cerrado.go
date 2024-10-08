@@ -2,7 +2,8 @@ package diccionario
 
 import (
 	"fmt"
-	fnv "hash/fnv"
+	"hash/fnv"
+	"math"
 )
 
 type Estado int
@@ -11,8 +12,9 @@ const (
 	_VACIO Estado = iota
 	_OCUPADO
 	_BORRADO
-	_TAM_INICIAL          = 20
-	_CRITERIO_REDIMENSION = 0.7
+	_TAM_INICIAL       = 23
+	_CRITERIO_AGRANDAR = 0.7
+	_CRITERIO_ACHICAR  = 0.3
 )
 
 type celdaHash[K comparable, V any] struct {
@@ -28,6 +30,10 @@ type hashCerrado[K comparable, V any] struct {
 	borrados int
 }
 
+func crearCeldaHash[K comparable, V any](clave K, dato V) celdaHash[K, V] {
+	return celdaHash[K, V]{clave: clave, dato: dato, estado: _OCUPADO}
+}
+
 func convertirABytes[K comparable](clave K) []byte {
 	return []byte(fmt.Sprintf("%v", clave))
 }
@@ -39,10 +45,31 @@ func hashing[K comparable](clave K, tam int) int {
 
 }
 
-// busca un indice dado dentro de la tabla hash, primero verifica que la clave que encontro sea igual a la dada y que el estado sea OCUPADO retornando el indice y verdadero,
-// de lo contrario, irá buscando en las siguientes posiciones de manera ciclica hasta encontrar una celda que tenga igual clave y estado ocupado.
-// si no se encuentra esta celda, el bucle terminará cuando encuentre una celda vacia y te retornará el indice de ésta (este seria el caso de una colisión al guardar una
-// nueva clave).
+func esPrimo(n int) bool {
+	if n == 1 {
+		return false
+	}
+	if n == 2 {
+		return true
+	}
+
+	//Solo verificamos hasta la raiz cuadrada del numero
+	limite := int(math.Sqrt(float64(n)))
+	for i := 3; i <= limite; i += 2 {
+		if n%i == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func obtenerPrimoSiguiente(n int) int {
+	for !esPrimo(n) {
+		n++
+	}
+	return n
+}
+
 func buscar[K comparable, V any](tabla []celdaHash[K, V], tam int, clave K) (int, bool) {
 	indice := hashing(clave, tam)
 	parDatoValor := tabla[indice]
@@ -53,7 +80,7 @@ func buscar[K comparable, V any](tabla []celdaHash[K, V], tam int, clave K) (int
 
 	i := 1
 
-	for parDatoValor.estado != _VACIO { // && indice < 2*tam
+	for parDatoValor.estado != _VACIO {
 		indice = (indice + i) % tam
 		parDatoValor = tabla[indice]
 		if parDatoValor.clave == clave && parDatoValor.estado == _OCUPADO {
@@ -65,15 +92,13 @@ func buscar[K comparable, V any](tabla []celdaHash[K, V], tam int, clave K) (int
 	return indice, false
 }
 
-func panicClaveNoPertenece[K comparable, V any](hash *hashCerrado[K, V], clave K) {
-	if !hash.Pertenece(clave) {
-		panic("La clave no pertenece al diccionario")
-	}
+func panicClaveNoPertenece() {
+	panic("La clave no pertenece al diccionario")
 }
 
 func redimensionar[K comparable, V any](hash *hashCerrado[K, V], tamnuevo int) {
 	tablaVieja := hash.tabla
-	//tamnuevo = obtenerPrimoSiguiente(tamnuevo)
+	tamnuevo = obtenerPrimoSiguiente(tamnuevo)
 	hash.tabla = make([]celdaHash[K, V], tamnuevo)
 	hash.cantidad = 0
 	hash.tam = tamnuevo
@@ -101,8 +126,8 @@ func (hash *hashCerrado[K, V]) Guardar(clave K, dato V) {
 		hash.tabla[indice].clave = clave
 		hash.tabla[indice].estado = _OCUPADO
 	} else {
-		hash.tabla[indice] = celdaHash[K, V]{clave: clave, dato: dato, estado: _OCUPADO}
-		if float64(hash.cantidad+hash.borrados)/float64(hash.tam) > _CRITERIO_REDIMENSION {
+		hash.tabla[indice] = crearCeldaHash(clave, dato)
+		if float64(hash.cantidad+hash.borrados)/float64(hash.tam) >= _CRITERIO_AGRANDAR {
 			redimensionar(hash, 2*hash.tam)
 		} else {
 			hash.cantidad++
@@ -116,17 +141,21 @@ func (hash *hashCerrado[K, V]) Pertenece(clave K) bool {
 }
 
 func (hash *hashCerrado[K, V]) Obtener(clave K) V {
-	panicClaveNoPertenece(hash, clave)
-	indice, _ := buscar(hash.tabla, hash.tam, clave)
+	indice, encontrado := buscar(hash.tabla, hash.tam, clave)
+	if !encontrado {
+		panicClaveNoPertenece()
+	}
 	return hash.tabla[indice].dato
 }
 
 func (hash *hashCerrado[K, V]) Borrar(clave K) V {
-	panicClaveNoPertenece(hash, clave)
-	if float64(hash.cantidad+hash.borrados)/float64(hash.tam) < 1-_CRITERIO_REDIMENSION && hash.tam/2 > _TAM_INICIAL {
+	if float64(hash.cantidad+hash.borrados)/float64(hash.tam) < _CRITERIO_ACHICAR && hash.tam/2 > _TAM_INICIAL {
 		redimensionar(hash, hash.tam/2)
 	}
-	indice, _ := buscar(hash.tabla, hash.tam, clave)
+	indice, encontrado := buscar(hash.tabla, hash.tam, clave)
+	if !encontrado {
+		panicClaveNoPertenece()
+	}
 	hash.tabla[indice].estado = _BORRADO
 	hash.cantidad--
 	hash.borrados++
@@ -153,9 +182,20 @@ func (hash *hashCerrado[K, V]) Iterador() IterDiccionario[K, V] {
 }
 
 type iterDiccionario[K comparable, V any] struct {
-	hash   *hashCerrado[K, V]
-	actual int
-	indice int
+	hash             *hashCerrado[K, V]
+	contadorIterados int
+	indice           int
+}
+
+func crearIteradorDiccionario[K comparable, V any](hash *hashCerrado[K, V]) *iterDiccionario[K, V] {
+	iter := new(iterDiccionario[K, V])
+	iter.hash = hash
+	iter.contadorIterados = 0
+	iter.indice = 0
+	if iter.hash.tabla[iter.indice].estado != _OCUPADO {
+		iterar(iter)
+	}
+	return iter
 }
 
 func panicIteradorTerminoDeIterar[K comparable, V any](iter *iterDiccionario[K, V]) {
@@ -164,38 +204,21 @@ func panicIteradorTerminoDeIterar[K comparable, V any](iter *iterDiccionario[K, 
 	}
 }
 
-// buscarPrimero, solamente se llegaría a ejecutar cuando invocas el primer iterador
-// y te ubica el indice en el primer elemento del dicc
-func buscarPrimero[K comparable, V any](iter *iterDiccionario[K, V]) {
+func iterar[K comparable, V any](iter *iterDiccionario[K, V]) {
 	for iter.indice < iter.hash.tam && iter.hash.tabla[iter.indice].estado != _OCUPADO {
 		iter.indice++
 	}
 }
 
-func crearIteradorDiccionario[K comparable, V any](hash *hashCerrado[K, V]) *iterDiccionario[K, V] {
-	iter := new(iterDiccionario[K, V])
-	iter.hash = hash
-	iter.actual = 0
-	iter.indice = 0
-	if iter.hash.tabla[iter.indice].estado != _OCUPADO {
-		buscarPrimero(iter)
-	}
-	return iter
-}
-
 func (iter *iterDiccionario[K, V]) HaySiguiente() bool {
-	// solamente necesito iterar hasta que haya pasado por la todos los elementos ocupados del dicc
-	return iter.actual < iter.hash.cantidad
+	return iter.contadorIterados < iter.hash.cantidad
 }
 
 func (iter *iterDiccionario[K, V]) Siguiente() {
 	panicIteradorTerminoDeIterar(iter)
-	// acá busco el índice, y sumo el "actual" una única vez, da igual si no encontró elemento, si sucede esto es que el dicc terminó.
 	iter.indice++
-	for iter.indice < iter.hash.tam && iter.hash.tabla[iter.indice].estado != _OCUPADO {
-		iter.indice++
-	}
-	iter.actual++
+	iterar(iter)
+	iter.contadorIterados++
 }
 
 func (iter *iterDiccionario[K, V]) VerActual() (K, V) {
