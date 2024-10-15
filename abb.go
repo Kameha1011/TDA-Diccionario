@@ -34,7 +34,7 @@ func panicAbb[K comparable, V any](nodo *nodoAbb[K, V]) {
 	}
 }
 
-func buscarNodoAbb[K comparable, V any](nodo *(*nodoAbb[K, V]), funcionCmp func(K, K) int, clave K) *(*nodoAbb[K, V]) {
+func buscarNodoAbb[K comparable, V any](nodo **nodoAbb[K, V], funcionCmp func(K, K) int, clave K) **nodoAbb[K, V] {
 	if *nodo == nil {
 		return nodo
 	}
@@ -48,7 +48,7 @@ func buscarNodoAbb[K comparable, V any](nodo *(*nodoAbb[K, V]), funcionCmp func(
 }
 
 func (abb *abb[K, V]) Guardar(clave K, valor V) {
-	nodoGuardar := buscarNodoAbb(&abb.raiz, abb.cmp, clave)
+	nodoGuardar := buscarNodoAbb(&(abb.raiz), abb.cmp, clave)
 	if *nodoGuardar == nil {
 		nuevoNodo := crearNodoAbb(clave, valor)
 		*nodoGuardar = nuevoNodo
@@ -71,30 +71,28 @@ func (abb *abb[K, V]) Borrar(clave K) V {
 	nodo := buscarNodoAbb(&abb.raiz, abb.cmp, clave)
 	panicAbb(*nodo)
 	dato := (*nodo).dato
-	borrarAbb(*nodo)
+	borrarAbb(nodo)
 	abb.cant--
 	return dato
 }
 
-func buscarMax[K comparable, V any](nodoPadre *nodoAbb[K, V]) *nodoAbb[K, V] {
-	if nodoPadre.der == nil {
+func buscarMax[K comparable, V any](nodoPadre **nodoAbb[K, V]) **nodoAbb[K, V] {
+	if (*nodoPadre).der == nil {
 		return nodoPadre
 	}
-	return buscarMax(nodoPadre.der)
+	return buscarMax(&(*nodoPadre).der)
 }
 
-func borrarAbb[K comparable, V any](nodoBorrar *nodoAbb[K, V]) {
-	if nodoBorrar.izq == nil || nodoBorrar.der == nil {
-		if (nodoBorrar).izq == nil {
-			nodoBorrar = nodoBorrar.der
-		} else {
-			nodoBorrar = nodoBorrar.izq
-		}
+func borrarAbb[K comparable, V any](nodoBorrar **nodoAbb[K, V]) {
+	if (*nodoBorrar).izq == nil {
+		*nodoBorrar = (*nodoBorrar).der
+	} else if (*nodoBorrar).der == nil {
+		*nodoBorrar = (*nodoBorrar).izq
 	} else {
-		max := buscarMax(nodoBorrar.izq)
-		nodoBorrar.clave = max.clave
-		nodoBorrar.dato = max.dato
-		borrarAbb(max)
+		nodoMax := buscarMax(&(*nodoBorrar).izq)
+		(*nodoBorrar).clave = (*nodoMax).clave
+		(*nodoBorrar).dato = (*nodoMax).dato
+		borrarAbb(nodoMax)
 	}
 
 }
@@ -133,10 +131,22 @@ func (abb *abb[K, V]) IteradorRango(desde *K, hasta *K) IterDiccionario[K, V] {
 	return crearIteradorAbb(abb)
 }
 
+func iterar[K comparable, V any](nodo *nodoAbb[K, V], visitar func(clave K, dato V) bool, condicion bool) bool {
+	if nodo == nil {
+		return true
+	}
+	if condicion {
+		condicion = iterar(nodo.izq, visitar, condicion)
+		condicion = visitar(nodo.clave, nodo.dato)
+		condicion = iterar(nodo.der, visitar, condicion)
+	}
+	return condicion
+}
+
 func (abb *abb[K, V]) IterarRango(desde *K, hasta *K, visitar func(clave K, dato V) bool) {
 	return
 }
 
 func (abb *abb[K, V]) Iterar(visitar func(clave K, dato V) bool) {
-	return
+	iterar(abb.raiz, visitar, true)
 }
