@@ -19,6 +19,7 @@ func TestDiccionario(t *testing.T) {
 	dic.Guardar(90, 7)
 	dic.Iterar(func(clave int, valor int) bool {
 		arr = append(arr, clave)
+		fmt.Println(clave, valor)
 		return clave < 30
 	})
 	fmt.Println(arr)
