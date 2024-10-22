@@ -9,7 +9,6 @@ import (
 func TestDiccionario(t *testing.T) {
 	var arr []int
 	dic := TDADiccionario.CrearAbb[int, int](funcionCmpInts)
-
 	dic.Guardar(30, 1)
 	dic.Guardar(20, 2)
 	dic.Guardar(80, 3)
@@ -23,4 +22,8 @@ func TestDiccionario(t *testing.T) {
 		return clave < 30
 	})
 	fmt.Println(arr)
+	// desde := 10
+
+	iter := dic.IteradorRango(nil, nil)
+	fmt.Println(iter)
 }

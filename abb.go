@@ -1,5 +1,9 @@
 package diccionario
 
+import (
+	TDAPila "tdas/pila"
+)
+
 type funcCmp[K comparable] func(K, K) int
 
 type nodoAbb[K comparable, V any] struct {
@@ -102,33 +106,58 @@ func (abb *abb[K, V]) Cantidad() int {
 }
 
 type iterAbb[K comparable, V any] struct {
-	abb *abb[K, V]
+	abb  *abb[K, V]
+	pila TDAPila.Pila[*nodoAbb[K, V]]
 }
 
-func crearIteradorAbb[K comparable, V any](abb *abb[K, V]) *iterAbb[K, V] {
+func crearIteradorAbb[K comparable, V any](abb *abb[K, V], desde *K, hasta *K) *iterAbb[K, V] {
 	iter := new(iterAbb[K, V])
+	pila := TDAPila.CrearPilaDinamica[*nodoAbb[K, V]]()
 	iter.abb = abb
+	iter.pila = pila
+	iter.apilarHastaPrimero(iter.abb.raiz, desde, hasta)
 	return iter
+}
 
+func panicIteradorTerminoDeIterar2[K comparable, V any](iter *iterAbb[K, V]) {
+	if !iter.HaySiguiente() {
+		panic("El iterador termino de iterar")
+	}
+}
+
+func (iter *iterAbb[K, V]) apilarHastaPrimero(nodo *nodoAbb[K, V], desde, hasta *K) {
+	if nodo == nil {
+		return
+	}
+	if desde == nil {
+		iter.pila.Apilar(nodo)
+		iter.apilarHastaPrimero(nodo.izq, desde, hasta)
+		return
+	}
+	if iter.abb.cmp(nodo.clave, *desde) >= 0 {
+		iter.pila.Apilar(nodo)
+		iter.apilarHastaPrimero(nodo.izq, desde, hasta)
+	}
 }
 
 func (abb *abb[K, V]) Iterador() IterDiccionario[K, V] {
-	return crearIteradorAbb(abb)
+	return crearIteradorAbb(abb, nil, nil)
 }
 
 func (iter *iterAbb[K, V]) Siguiente() {
-	return
+	panicIteradorTerminoDeIterar2(iter)
 }
 
 func (iter *iterAbb[K, V]) HaySiguiente() bool {
-	return iter.HaySiguiente()
+	return iter.pila.EstaVacia()
 }
 func (iter *iterAbb[K, V]) VerActual() (K, V) {
-	return iter.VerActual()
+	panicIteradorTerminoDeIterar2(iter)
+	return iter.pila.VerTope().clave, iter.pila.VerTope().dato
 }
 
 func (abb *abb[K, V]) IteradorRango(desde *K, hasta *K) IterDiccionario[K, V] {
-	return crearIteradorAbb(abb)
+	return crearIteradorAbb(abb, desde, hasta)
 }
 
 func (abb *abb[K, V]) iterar(nodo *nodoAbb[K, V], visitar func(clave K, dato V) bool, condicion bool, hasta *K) bool {
