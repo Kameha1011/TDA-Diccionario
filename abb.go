@@ -133,23 +133,34 @@ func (abb *abb[K, V]) IteradorRango(desde *K, hasta *K) IterDiccionario[K, V] {
 
 func (abb *abb[K, V]) iterar(nodo *nodoAbb[K, V], visitar func(clave K, dato V) bool, condicion bool, hasta *K) bool {
 	if nodo == nil {
-		return false
+		return condicion
 	}
+
 	if hasta != nil && abb.cmp(nodo.clave, *hasta) > 0 {
-		return false
+		return condicion
 	}
+
+	condicion = abb.iterar(nodo.izq, visitar, condicion, hasta)
+
 	if condicion {
-		abb.iterar(nodo.izq, visitar, condicion, hasta)
 		condicion = visitar(nodo.clave, nodo.dato)
-		abb.iterar(nodo.der, visitar, condicion, hasta)
 	}
+
+	if condicion {
+		return abb.iterar(nodo.der, visitar, condicion, hasta)
+	}
+
 	return condicion
 }
 
 func (abb *abb[K, V]) IterarRango(desde *K, hasta *K, visitar func(clave K, dato V) bool) {
+	if desde == nil {
+		abb.iterar(abb.raiz, visitar, true, hasta)
+		return
+	}
+
 	inicio := buscarNodoAbb(&abb.raiz, abb.cmp, *desde)
 	abb.iterar(*inicio, visitar, true, hasta)
-	return
 }
 
 func (abb *abb[K, V]) Iterar(visitar func(clave K, dato V) bool) {
