@@ -106,8 +106,9 @@ func (abb *abb[K, V]) Cantidad() int {
 }
 
 type iterAbb[K comparable, V any] struct {
-	abb  *abb[K, V]
-	pila TDAPila.Pila[*nodoAbb[K, V]]
+	abb   *abb[K, V]
+	pila  TDAPila.Pila[*nodoAbb[K, V]]
+	hasta *K
 }
 
 func crearIteradorAbb[K comparable, V any](abb *abb[K, V], desde *K, hasta *K) *iterAbb[K, V] {
@@ -116,6 +117,7 @@ func crearIteradorAbb[K comparable, V any](abb *abb[K, V], desde *K, hasta *K) *
 	iter.abb = abb
 	iter.pila = pila
 	iter.apilarHastaPrimero(iter.abb.raiz, desde, hasta)
+	iter.hasta = hasta
 	return iter
 }
 
@@ -144,12 +146,31 @@ func (abb *abb[K, V]) Iterador() IterDiccionario[K, V] {
 	return crearIteradorAbb(abb, nil, nil)
 }
 
+func (iter *iterAbb[K, V]) apilarIzqRec(nodo *nodoAbb[K, V], hasta *K) {
+	if nodo == nil {
+		return
+	}
+	if hasta == nil {
+		iter.pila.Apilar(nodo)
+		iter.apilarIzqRec(nodo.izq, hasta)
+	} else if iter.abb.cmp(nodo.clave, *iter.hasta) < 0 {
+		iter.pila.Apilar(nodo)
+	} else if nodo.izq == nil || iter.abb.cmp(nodo.izq.clave, *iter.hasta) < 0 {
+		iter.apilarIzqRec(nodo.izq, hasta)
+	}
+
+}
+
 func (iter *iterAbb[K, V]) Siguiente() {
 	panicIteradorTerminoDeIterar2(iter)
+	nodo := iter.pila.Desapilar()
+	if nodo.der != nil {
+		iter.apilarIzqRec(nodo.der, iter.hasta)
+	}
 }
 
 func (iter *iterAbb[K, V]) HaySiguiente() bool {
-	return iter.pila.EstaVacia()
+	return !iter.pila.EstaVacia()
 }
 func (iter *iterAbb[K, V]) VerActual() (K, V) {
 	panicIteradorTerminoDeIterar2(iter)
