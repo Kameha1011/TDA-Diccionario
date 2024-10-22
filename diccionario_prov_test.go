@@ -15,11 +15,8 @@ func TestDiccionario(t *testing.T) {
 	dic.Guardar(23, 5)
 	dic.Guardar(70, 6)
 	dic.Guardar(90, 7)
-	desde := 20
-	fin := 80
-	iter := dic.IteradorRango(&desde, &fin)
-	for iter.HaySiguiente() {
-		fmt.Println(iter.VerActual())
-		iter.Siguiente()
-	}
+	dic.Iterar(func(clave int, dato int) bool {
+		fmt.Println(clave)
+		return clave <= 30
+	})
 }
