@@ -65,7 +65,7 @@ func borrarAbb[K comparable, V any](nodoBorrar **nodoAbb[K, V]) {
 	}
 }
 
-func (abb *abb[K, V]) iterar(nodo *nodoAbb[K, V], visitar func(clave K, dato V) bool, seguir bool, hasta *K) bool {
+func (abb *abb[K, V]) iterar(nodo *nodoAbb[K, V], visitar func(clave K, dato V) bool, seguir bool, desde, hasta *K) bool {
 	if nodo == nil {
 		return seguir
 	}
@@ -74,13 +74,14 @@ func (abb *abb[K, V]) iterar(nodo *nodoAbb[K, V], visitar func(clave K, dato V) 
 		return seguir
 	}
 
-	seguir = abb.iterar(nodo.izq, visitar, seguir, hasta)
-
+	if desde == nil || abb.cmp(nodo.clave, *desde) > 0 {
+		seguir = abb.iterar(nodo.izq, visitar, seguir, desde, hasta)
+	}
 	if seguir {
 		seguir = visitar(nodo.clave, nodo.dato)
 	}
 	if seguir {
-		return abb.iterar(nodo.der, visitar, seguir, hasta)
+		return abb.iterar(nodo.der, visitar, seguir, desde, hasta)
 	}
 	return seguir
 }
@@ -126,17 +127,17 @@ func (abb *abb[K, V]) Cantidad() int {
 }
 
 func (abb *abb[K, V]) Iterar(visitar func(clave K, dato V) bool) {
-	abb.iterar(abb.raiz, visitar, true, nil)
+	abb.iterar(abb.raiz, visitar, true, nil, nil)
 }
 
 func (abb *abb[K, V]) IterarRango(desde *K, hasta *K, visitar func(clave K, dato V) bool) {
 	if desde == nil {
-		abb.iterar(abb.raiz, visitar, true, hasta)
+		abb.iterar(abb.raiz, visitar, true, desde, hasta)
 		return
 	}
 
 	inicio := buscarNodoAbb(&abb.raiz, abb.cmp, *desde)
-	abb.iterar(*inicio, visitar, true, hasta)
+	abb.iterar(*inicio, visitar, true, desde, hasta)
 }
 
 type iterAbb[K comparable, V any] struct {

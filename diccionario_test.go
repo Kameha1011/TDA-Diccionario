@@ -2,10 +2,16 @@ package diccionario_test
 
 import (
 	"fmt"
+	"math/rand/v2"
 	TDADiccionario "tdas/diccionario"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	_VOLUMEN_CHICO  = 1000
+	_VOLUMEN_GRANDE = 10000
 )
 
 var TAMS_VOLUMEN = []int{12500, 25000, 50000, 100000, 200000, 400000}
@@ -30,24 +36,52 @@ var funcionCmpStrings = func(a, b string) int {
 	return 0
 }
 
-var funcionCmpRunas = func(a, b rune) int {
-	if a < b {
-		return -1
+func poblarArr(arr []int, max int) {
+	hash := make(map[int]int)
+	for i := 0; i < len(arr); i++ {
+		for {
+			n := rand.IntN(max)
+			if _, ok := hash[n]; !ok {
+				arr[i] = n
+				hash[n] = 1
+				break
+			}
+		}
 	}
-	if a > b {
-		return 1
-	}
-	return 0
 }
 
-var funcionCmpFloats = func(a, b float64) int {
-	if a < b {
-		return -1
+func ordenarArr(arr []int) {
+	if len(arr) <= 1 {
+		return
 	}
-	if a > b {
-		return 1
+	medio := len(arr) / 2
+	izq := make([]int, medio)
+	der := make([]int, len(arr)-medio)
+	copy(izq, arr[:medio])
+	copy(der, arr[medio:])
+	ordenarArr(izq)
+	ordenarArr(der)
+	i, j, k := 0, 0, 0
+	for i < len(izq) && j < len(der) {
+		if izq[i] < der[j] {
+			arr[k] = izq[i]
+			i++
+		} else {
+			arr[k] = der[j]
+			j++
+		}
+		k++
 	}
-	return 0
+	for i < len(izq) {
+		arr[k] = izq[i]
+		i++
+		k++
+	}
+	for j < len(der) {
+		arr[k] = der[j]
+		j++
+		k++
+	}
 }
 
 func TestDiccionarioVacio(t *testing.T) {
@@ -60,7 +94,7 @@ func TestDiccionarioVacio(t *testing.T) {
 }
 
 func TestDiccionarioClaveDefault(t *testing.T) {
-	t.Log("Prueba sobre un Hash vacío que si justo buscamos la clave que es el default del tipo de dato, " +
+	t.Log("Prueba sobre un Abb vacío que si justo buscamos la clave que es el default del tipo de dato, " +
 		"sigue sin existir")
 	dic := TDADiccionario.CrearAbb[string, string](funcionCmpStrings)
 	require.False(t, dic.Pertenece(""))
@@ -151,16 +185,19 @@ func TestReemplazoDatoHopscotch(t *testing.T) {
 	t.Log("Guarda bastantes claves, y luego reemplaza sus datos. Luego valida que todos los datos sean " +
 		"correctos. Para una implementación Hopscotch, detecta errores al hacer lugar o guardar elementos.")
 
-	dic := TDADiccionario.CrearHash[int, int]()
-	for i := 0; i < 500; i++ {
-		dic.Guardar(i, i)
+	arrClaves := make([]int, _VOLUMEN_CHICO) // Creamos las claves de forma aleatoria para que al insertarlo no nos quede lineal
+	poblarArr(arrClaves, 2*_VOLUMEN_CHICO)
+
+	dic := TDADiccionario.CrearAbb[int, int](funcionCmpInts)
+	for i := 0; i < _VOLUMEN_CHICO; i++ {
+		dic.Guardar(arrClaves[i], i)
 	}
-	for i := 0; i < 500; i++ {
-		dic.Guardar(i, 2*i)
+	for i := 0; i < _VOLUMEN_CHICO; i++ {
+		dic.Guardar(arrClaves[i], 2*i)
 	}
 	ok := true
-	for i := 0; i < 500 && ok; i++ {
-		ok = dic.Obtener(i) == 2*i
+	for i := 0; i < _VOLUMEN_CHICO && ok; i++ {
+		ok = dic.Obtener(arrClaves[i]) == 2*i
 	}
 	require.True(t, ok, "Los elementos no fueron actualizados correctamente")
 }
@@ -206,7 +243,7 @@ func TestDiccionarioBorrar(t *testing.T) {
 }
 
 func TestReutlizacionDeBorrados(t *testing.T) {
-	t.Log("Prueba de caja blanca: revisa, para el caso que fuere un HashCerrado, que no haya problema " +
+	t.Log("Prueba de caja blanca: revisa que no haya problema " +
 		"reinsertando un elemento borrado")
 	dic := TDADiccionario.CrearAbb[string, string](funcionCmpStrings)
 	clave := "hola"
@@ -257,8 +294,7 @@ func TestValorNulo(t *testing.T) {
 }
 
 func TestCadenaLargaParticular(t *testing.T) {
-	t.Log("Se han visto casos problematicos al utilizar la funcion de hashing de K&R, por lo que " +
-		"se agrega una prueba con dicha funcion de hashing y una cadena muy larga")
+	t.Log("Guardamos claves largas y verificamos que se guarden correctamente")
 	// El caracter '~' es el de mayor valor en ASCII (126).
 	claves := make([]string, 10)
 	cadena := "%d~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" +
@@ -280,16 +316,16 @@ func TestCadenaLargaParticular(t *testing.T) {
 }
 
 func TestGuardarYBorrarRepetidasVeces(t *testing.T) {
-	t.Log("Esta prueba guarda y borra repetidas veces. Esto lo hacemos porque un error comun es no considerar " +
-		"los borrados para agrandar en un Hash Cerrado. Si no se agranda, muy probablemente se quede en un ciclo " +
-		"infinito")
+	t.Log("Esta prueba guarda y borra repetidas veces")
 
-	dic := TDADiccionario.CrearHash[int, int]()
-	for i := 0; i < 1000; i++ {
-		dic.Guardar(i, i)
-		require.True(t, dic.Pertenece(i))
-		dic.Borrar(i)
-		require.False(t, dic.Pertenece(i))
+	arrClaves := make([]int, _VOLUMEN_CHICO)
+	poblarArr(arrClaves, 2*_VOLUMEN_CHICO)
+	dic := TDADiccionario.CrearAbb[int, int](funcionCmpInts)
+	for i := 0; i < _VOLUMEN_CHICO; i++ {
+		dic.Guardar(arrClaves[i], i)
+		require.True(t, dic.Pertenece(arrClaves[i]))
+		dic.Borrar(arrClaves[i])
+		require.False(t, dic.Pertenece(arrClaves[i]))
 	}
 }
 
@@ -308,7 +344,7 @@ func TestIteradorInternoClaves(t *testing.T) {
 	clave2 := "Perro"
 	clave3 := "Vaca"
 	claves := []string{clave1, clave2, clave3}
-	dic := TDADiccionario.CrearHash[string, *int]()
+	dic := TDADiccionario.CrearAbb[string, *int](funcionCmpStrings)
 	dic.Guardar(claves[0], nil)
 	dic.Guardar(claves[1], nil)
 	dic.Guardar(claves[2], nil)
@@ -340,7 +376,7 @@ func TestIteradorInternoValores(t *testing.T) {
 	clave4 := "Burrito"
 	clave5 := "Hamster"
 
-	dic := TDADiccionario.CrearHash[string, int]()
+	dic := TDADiccionario.CrearAbb[string, int](funcionCmpStrings)
 	dic.Guardar(clave1, 6)
 	dic.Guardar(clave2, 2)
 	dic.Guardar(clave3, 3)
@@ -357,6 +393,52 @@ func TestIteradorInternoValores(t *testing.T) {
 	require.EqualValues(t, 720, factorial)
 }
 
+func TestIteradorInternoOrdenado(t *testing.T) {
+	t.Log("Valida que los datos sean recorridos de forma ordenada comparando con un array de claves ordenado")
+	arrClaves := make([]int, _VOLUMEN_CHICO)
+	poblarArr(arrClaves, 2*_VOLUMEN_CHICO)
+	dic := TDADiccionario.CrearAbb[int, int](funcionCmpInts)
+
+	for i := 0; i < _VOLUMEN_CHICO; i++ {
+		dic.Guardar(arrClaves[i], i)
+	}
+
+	arrClavesOrdenado := make([]int, _VOLUMEN_CHICO)
+	copy(arrClavesOrdenado, arrClaves)
+	ordenarArr(arrClavesOrdenado)
+
+	require.EqualValues(t, _VOLUMEN_CHICO, dic.Cantidad())
+
+	arrClavesRecorridas := make([]int, 0, _VOLUMEN_CHICO)
+
+	dic.Iterar(func(clave int, _ int) bool {
+		arrClavesRecorridas = append(arrClavesRecorridas, clave)
+		return true
+	})
+
+	require.EqualValues(t, arrClavesOrdenado, arrClavesRecorridas)
+
+}
+
+func TestIteradorInternoRango(t *testing.T) {
+	dic := TDADiccionario.CrearAbb[int, int](funcionCmpInts)
+	claves := []int{5, 8, 2, 6, 0, 1, -4, 3, 7, 4}
+	for _, c := range claves {
+		dic.Guardar(c, c)
+	}
+
+	inicio := 2
+	fin := 5
+	arrClavesRecorridas := make([]int, 0, 3)
+	dic.IterarRango(&inicio, &fin, func(clave int, _ int) bool {
+		arrClavesRecorridas = append(arrClavesRecorridas, clave)
+		return true
+	})
+	arrClavesDeberianSerRecorridas := []int{2, 3, 4}
+	require.EqualValues(t, arrClavesDeberianSerRecorridas, arrClavesRecorridas)
+
+}
+
 func TestIteradorInternoValoresConBorrados(t *testing.T) {
 	t.Log("Valida que los datos sean recorridas correctamente (y una única vez) con el iterador interno, sin recorrer datos borrados")
 	clave0 := "Elefante"
@@ -366,7 +448,7 @@ func TestIteradorInternoValoresConBorrados(t *testing.T) {
 	clave4 := "Burrito"
 	clave5 := "Hamster"
 
-	dic := TDADiccionario.CrearHash[string, int]()
+	dic := TDADiccionario.CrearAbb[string, int](funcionCmpStrings)
 	dic.Guardar(clave0, 7)
 	dic.Guardar(clave1, 6)
 	dic.Guardar(clave2, 2)
@@ -387,15 +469,17 @@ func TestIteradorInternoValoresConBorrados(t *testing.T) {
 }
 
 func ejecutarPruebaVolumen(b *testing.B, n int) {
-	dic := TDADiccionario.CrearHash[string, int]()
+	dic := TDADiccionario.CrearAbb[string, int](funcionCmpStrings)
 
 	claves := make([]string, n)
+	arrClaves := make([]int, n)
+	poblarArr(arrClaves, n*2)
 	valores := make([]int, n)
 
-	/* Inserta 'n' parejas en el hash */
+	/* Inserta 'n' parejas en el Abb */
 	for i := 0; i < n; i++ {
 		valores[i] = i
-		claves[i] = fmt.Sprintf("%08d", i)
+		claves[i] = fmt.Sprintf("%08d", arrClaves[i])
 		dic.Guardar(claves[i], valores[i])
 	}
 
@@ -431,4 +515,245 @@ func ejecutarPruebaVolumen(b *testing.B, n int) {
 
 	require.True(b, ok, "Borrar muchos elementos no funciona correctamente")
 	require.EqualValues(b, 0, dic.Cantidad())
+}
+
+func BenchmarkDiccionario(b *testing.B) {
+	b.Log("Prueba de stress del Diccionario. Prueba guardando distinta cantidad de elementos (muy grandes), " +
+		"ejecutando muchas veces las pruebas para generar un benchmark. Valida que la cantidad " +
+		"sea la adecuada. Luego validamos que podemos obtener y ver si pertenece cada una de las claves geeneradas, " +
+		"y que luego podemos borrar sin problemas")
+	for _, n := range TAMS_VOLUMEN {
+		b.Run(fmt.Sprintf("Prueba %d elementos", n), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				ejecutarPruebaVolumen(b, n)
+			}
+		})
+	}
+}
+
+func TestIterarDiccionarioVacio(t *testing.T) {
+	t.Log("Iterar sobre diccionario vacio es simplemente tenerlo al final")
+	dic := TDADiccionario.CrearAbb[string, int](funcionCmpStrings)
+	iter := dic.Iterador()
+	require.False(t, iter.HaySiguiente())
+	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.VerActual() })
+	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.Siguiente() })
+}
+
+func TestDiccionarioIterar(t *testing.T) {
+	t.Log("Guardamos 3 valores en un Diccionario, e iteramos validando que las claves sean todas diferentes " +
+		"pero pertenecientes al diccionario. Además los valores de VerActual y Siguiente van siendo correctos entre sí")
+	clave1 := "Gato"
+	clave2 := "Perro"
+	clave3 := "Vaca"
+	valor1 := "miau"
+	valor2 := "guau"
+	valor3 := "moo"
+	claves := []string{clave1, clave2, clave3}
+	valores := []string{valor1, valor2, valor3}
+	dic := TDADiccionario.CrearAbb[string, string](funcionCmpStrings)
+	dic.Guardar(claves[0], valores[0])
+	dic.Guardar(claves[1], valores[1])
+	dic.Guardar(claves[2], valores[2])
+	iter := dic.Iterador()
+
+	require.True(t, iter.HaySiguiente())
+	primero, _ := iter.VerActual()
+	require.NotEqualValues(t, -1, buscar(primero, claves))
+
+	iter.Siguiente()
+	segundo, segundo_valor := iter.VerActual()
+	require.NotEqualValues(t, -1, buscar(segundo, claves))
+	require.EqualValues(t, valores[buscar(segundo, claves)], segundo_valor)
+	require.NotEqualValues(t, primero, segundo)
+	require.True(t, iter.HaySiguiente())
+
+	iter.Siguiente()
+	require.True(t, iter.HaySiguiente())
+	tercero, _ := iter.VerActual()
+	require.NotEqualValues(t, -1, buscar(tercero, claves))
+	require.NotEqualValues(t, primero, tercero)
+	require.NotEqualValues(t, segundo, tercero)
+	iter.Siguiente()
+
+	require.False(t, iter.HaySiguiente())
+	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.VerActual() })
+	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.Siguiente() })
+}
+
+func TestDiccionarioIterarRango(t *testing.T) {
+	dic := TDADiccionario.CrearAbb[int, int](funcionCmpInts)
+	claves := []int{5, 8, 2, 6, 0, 1, 3, 7, 4, 9}
+	for _, c := range claves {
+		dic.Guardar(c, c)
+	}
+	inicio := 1
+	fin := 5
+	for iter := dic.IteradorRango(&inicio, &fin); iter.HaySiguiente(); iter.Siguiente() {
+		clave, _ := iter.VerActual()
+		require.True(t, clave >= inicio && clave < fin)
+		fmt.Println(clave)
+	}
+}
+
+func TestIteradorNoLlegaAlFinal(t *testing.T) {
+	t.Log("Crea un iterador y no lo avanza. Luego crea otro iterador y lo avanza.")
+	dic := TDADiccionario.CrearAbb[string, string](funcionCmpStrings)
+	claves := []string{"A", "B", "C"}
+	dic.Guardar(claves[0], "")
+	dic.Guardar(claves[1], "")
+	dic.Guardar(claves[2], "")
+
+	dic.Iterador()
+	iter2 := dic.Iterador()
+	iter2.Siguiente()
+	iter3 := dic.Iterador()
+	primero, _ := iter3.VerActual()
+	iter3.Siguiente()
+	segundo, _ := iter3.VerActual()
+	iter3.Siguiente()
+	tercero, _ := iter3.VerActual()
+	iter3.Siguiente()
+	require.False(t, iter3.HaySiguiente())
+	require.NotEqualValues(t, primero, segundo)
+	require.NotEqualValues(t, tercero, segundo)
+	require.NotEqualValues(t, primero, tercero)
+	require.NotEqualValues(t, -1, buscar(primero, claves))
+	require.NotEqualValues(t, -1, buscar(segundo, claves))
+	require.NotEqualValues(t, -1, buscar(tercero, claves))
+}
+
+func TestPruebaIterarTrasBorrados(t *testing.T) {
+	t.Log("Prueba la iteracion de un diccionario tras borrar los elementos e insertar nuevos")
+
+	clave1 := "Gato"
+	clave2 := "Perro"
+	clave3 := "Vaca"
+
+	dic := TDADiccionario.CrearAbb[string, string](funcionCmpStrings)
+	dic.Guardar(clave1, "")
+	dic.Guardar(clave2, "")
+	dic.Guardar(clave3, "")
+	dic.Borrar(clave1)
+	dic.Borrar(clave2)
+	dic.Borrar(clave3)
+	iter := dic.Iterador()
+
+	require.False(t, iter.HaySiguiente())
+	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.VerActual() })
+	require.PanicsWithValue(t, "El iterador termino de iterar", func() { iter.Siguiente() })
+	dic.Guardar(clave1, "A")
+	iter = dic.Iterador()
+
+	require.True(t, iter.HaySiguiente())
+	c1, v1 := iter.VerActual()
+	require.EqualValues(t, clave1, c1)
+	require.EqualValues(t, "A", v1)
+	iter.Siguiente()
+	require.False(t, iter.HaySiguiente())
+}
+
+func ejecutarPruebasVolumenIterador(b *testing.B, n int) {
+	dic := TDADiccionario.CrearAbb[string, *int](funcionCmpStrings)
+
+	claves := make([]string, n)
+	arrClaves := make([]int, n)
+	poblarArr(arrClaves, n*2)
+	valores := make([]int, n)
+
+	/* Inserta 'n' parejas en el Abb */
+	for i := 0; i < n; i++ {
+		claves[i] = fmt.Sprintf("%08d", arrClaves[i])
+		valores[i] = i
+		dic.Guardar(claves[i], &valores[i])
+	}
+
+	// Prueba de iteración sobre las claves almacenadas.
+	iter := dic.Iterador()
+	require.True(b, iter.HaySiguiente())
+
+	ok := true
+	var i int
+	var clave string
+	var valor *int
+
+	for i = 0; i < n; i++ {
+		if !iter.HaySiguiente() {
+			ok = false
+			break
+		}
+		c1, v1 := iter.VerActual()
+		clave = c1
+		if clave == "" {
+			ok = false
+			break
+		}
+		valor = v1
+		if valor == nil {
+			ok = false
+			break
+		}
+		*valor = n
+		iter.Siguiente()
+	}
+	require.True(b, ok, "Iteracion en volumen no funciona correctamente")
+	require.EqualValues(b, n, i, "No se recorrió todo el largo")
+	require.False(b, iter.HaySiguiente(), "El iterador debe estar al final luego de recorrer")
+
+	ok = true
+	for i = 0; i < n; i++ {
+		if valores[i] != n {
+			ok = false
+			break
+		}
+	}
+	require.True(b, ok, "No se cambiaron todos los elementos")
+}
+
+func BenchmarkIterador(b *testing.B) {
+	b.Log("Prueba de stress del Iterador del Diccionario. Prueba guardando distinta cantidad de elementos " +
+		"(muy grandes) b.N elementos, iterarlos todos sin problemas. Se ejecuta cada prueba b.N veces para generar " +
+		"un benchmark")
+	for _, n := range TAMS_VOLUMEN {
+		b.Run(fmt.Sprintf("Prueba %d elementos", n), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				ejecutarPruebasVolumenIterador(b, n)
+			}
+		})
+	}
+}
+
+func TestVolumenIteradorCorte(t *testing.T) {
+	t.Log("Prueba de volumen de iterador interno, para validar que siempre que se indique que se corte" +
+		" la iteración con la función visitar, se corte")
+
+	dic := TDADiccionario.CrearAbb[int, int](funcionCmpInts)
+
+	arrClaves := make([]int, _VOLUMEN_GRANDE)
+	poblarArr(arrClaves, 2*_VOLUMEN_GRANDE)
+
+	/* Inserta 'n' parejas en el Abb */
+	for i := 0; i < _VOLUMEN_GRANDE; i++ {
+		dic.Guardar(arrClaves[i], i)
+	}
+	dic.Guardar(100, 18) // Insertamos este elemento para asegurarnos que el corte en algun momento se cumpla
+
+	seguirEjecutando := true
+	siguioEjecutandoCuandoNoDebia := false
+
+	dic.Iterar(func(c int, v int) bool {
+		if !seguirEjecutando {
+			siguioEjecutandoCuandoNoDebia = true
+			return false
+		}
+		if c%100 == 0 {
+			seguirEjecutando = false
+			return false
+		}
+		return true
+	})
+
+	require.False(t, seguirEjecutando, "Se tendría que haber encontrado un elemento que genere el corte")
+	require.False(t, siguioEjecutandoCuandoNoDebia,
+		"No debería haber seguido ejecutando si encontramos un elemento que hizo que la iteración corte")
 }
