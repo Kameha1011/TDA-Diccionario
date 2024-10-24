@@ -163,17 +163,17 @@ func panicIteradorTerminoDeIterar2[K comparable, V any](iter *iterAbb[K, V]) {
 }
 
 func (iter *iterAbb[K, V]) apilarHastaPrimero(nodo *nodoAbb[K, V], desde *K) {
-	if nodo == nil {
+	if nodo == nil || !iter.pila.EstaVacia() && iter.pila.VerTope().clave == *desde {
 		return
 	}
-	if desde == nil {
+
+	if desde == nil || iter.abb.cmp(nodo.clave, *desde) >= 0 {
 		iter.pila.Apilar(nodo)
-		iter.apilarHastaPrimero(nodo.izq, desde)
-		return
 	}
-	if iter.abb.cmp(nodo.clave, *desde) >= 0 {
-		iter.pila.Apilar(nodo)
-		iter.apilarHastaPrimero(nodo.izq, desde)
+
+	iter.apilarHastaPrimero(nodo.izq, desde)
+	if desde != nil {
+		iter.apilarHastaPrimero(nodo.der, desde)
 	}
 }
 
@@ -182,10 +182,10 @@ func (iter *iterAbb[K, V]) apilarIzqRec(nodo *nodoAbb[K, V], hasta *K) {
 		return
 	}
 	if hasta != nil {
-		if iter.abb.cmp(nodo.clave, *iter.hasta) < 0 {
+		if iter.abb.cmp(nodo.clave, *iter.hasta) <= 0 {
 			iter.pila.Apilar(nodo)
 		}
-		if nodo.izq == nil || iter.abb.cmp(nodo.izq.clave, *iter.hasta) < 0 {
+		if nodo.izq == nil || iter.abb.cmp(nodo.izq.clave, *iter.hasta) <= 0 {
 			iter.apilarIzqRec(nodo.izq, hasta)
 		}
 		return

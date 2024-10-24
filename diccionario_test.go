@@ -588,11 +588,10 @@ func TestDiccionarioIterarRango(t *testing.T) {
 		dic.Guardar(c, c)
 	}
 	inicio := 1
-	fin := 5
+	fin := 7
 	for iter := dic.IteradorRango(&inicio, &fin); iter.HaySiguiente(); iter.Siguiente() {
 		clave, _ := iter.VerActual()
-		require.True(t, clave >= inicio && clave < fin)
-		fmt.Println(clave)
+		require.True(t, clave >= inicio && clave <= fin)
 	}
 }
 
