@@ -151,7 +151,7 @@ func crearIteradorAbb[K comparable, V any](abb *abb[K, V], desde *K, hasta *K) *
 	pila := TDAPila.CrearPilaDinamica[*nodoAbb[K, V]]()
 	iter.abb = abb
 	iter.pila = pila
-	iter.apilarHastaPrimero(iter.abb.raiz, desde)
+	iter.apilarHastaPrimero(iter.abb.raiz, desde, hasta)
 	iter.hasta = hasta
 	return iter
 }
@@ -162,18 +162,19 @@ func panicIteradorTerminoDeIterar2[K comparable, V any](iter *iterAbb[K, V]) {
 	}
 }
 
-func (iter *iterAbb[K, V]) apilarHastaPrimero(nodo *nodoAbb[K, V], desde *K) {
-	if nodo == nil || !iter.pila.EstaVacia() && iter.pila.VerTope().clave == *desde {
+func (iter *iterAbb[K, V]) apilarHastaPrimero(nodo *nodoAbb[K, V], desde, hasta *K) {
+	if nodo == nil {
 		return
 	}
 
-	if desde == nil || iter.abb.cmp(nodo.clave, *desde) >= 0 {
+	if desde == nil && hasta == nil || iter.abb.cmp(nodo.clave, *desde) >= 0 && iter.abb.cmp(nodo.clave, *hasta) < 0 {
 		iter.pila.Apilar(nodo)
 	}
 
-	iter.apilarHastaPrimero(nodo.izq, desde)
-	if desde != nil {
-		iter.apilarHastaPrimero(nodo.der, desde)
+	if desde != nil && iter.abb.cmp(nodo.clave, *desde) > 0 {
+		iter.apilarHastaPrimero(nodo.izq, desde, hasta)
+	} else {
+		iter.apilarHastaPrimero(nodo.der, desde, hasta)
 	}
 }
 
@@ -181,6 +182,7 @@ func (iter *iterAbb[K, V]) apilarIzqRec(nodo *nodoAbb[K, V], hasta *K) {
 	if nodo == nil {
 		return
 	}
+
 	if hasta != nil {
 		if iter.abb.cmp(nodo.clave, *iter.hasta) <= 0 {
 			iter.pila.Apilar(nodo)
@@ -190,6 +192,7 @@ func (iter *iterAbb[K, V]) apilarIzqRec(nodo *nodoAbb[K, V], hasta *K) {
 		}
 		return
 	}
+
 	iter.apilarIzqRec(nodo.izq, hasta)
 	iter.pila.Apilar(nodo)
 

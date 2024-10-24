@@ -583,15 +583,17 @@ func TestDiccionarioIterar(t *testing.T) {
 
 func TestDiccionarioIterarRango(t *testing.T) {
 	dic := TDADiccionario.CrearAbb[int, int](funcionCmpInts)
-	claves := []int{5, 8, 2, 6, 0, 1, 3, 7, 4, 9}
+	claves := []int{15, 7, 3, 11, 6, 10, 13}
 	for _, c := range claves {
 		dic.Guardar(c, c)
 	}
-	inicio := 1
-	fin := 7
+
+	inicio := 20
+	fin := -3
 	for iter := dic.IteradorRango(&inicio, &fin); iter.HaySiguiente(); iter.Siguiente() {
 		clave, _ := iter.VerActual()
 		require.True(t, clave >= inicio && clave <= fin)
+		fmt.Println(clave)
 	}
 }
 
