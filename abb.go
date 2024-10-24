@@ -70,14 +70,13 @@ func (abb *abb[K, V]) iterar(nodo *nodoAbb[K, V], visitar func(clave K, dato V) 
 		return seguir
 	}
 
-	if hasta != nil && abb.cmp(nodo.clave, *hasta) > 0 {
-		return seguir
-	}
+	rangoInicio := desde == nil || abb.cmp(nodo.clave, *desde) >= 0
+	rangoFin := hasta == nil || abb.cmp(nodo.clave, *hasta) <= 0
 
-	if desde == nil || abb.cmp(nodo.clave, *desde) > 0 {
+	if rangoInicio {
 		seguir = abb.iterar(nodo.izq, visitar, seguir, desde, hasta)
 	}
-	if seguir {
+	if seguir && rangoInicio && rangoFin {
 		seguir = visitar(nodo.clave, nodo.dato)
 	}
 	if seguir {
@@ -86,7 +85,7 @@ func (abb *abb[K, V]) iterar(nodo *nodoAbb[K, V], visitar func(clave K, dato V) 
 	return seguir
 }
 
-func CrearAbb[K comparable, V any](funcionCmp func(K, K) int) DiccionarioOrdenado[K, V] {
+func CrearABB[K comparable, V any](funcionCmp func(K, K) int) DiccionarioOrdenado[K, V] {
 	abb := new(abb[K, V])
 	abb.cmp = funcionCmp
 	return abb
@@ -131,13 +130,7 @@ func (abb *abb[K, V]) Iterar(visitar func(clave K, dato V) bool) {
 }
 
 func (abb *abb[K, V]) IterarRango(desde *K, hasta *K, visitar func(clave K, dato V) bool) {
-	if desde == nil {
-		abb.iterar(abb.raiz, visitar, true, desde, hasta)
-		return
-	}
-
-	inicio := buscarNodoAbb(&abb.raiz, abb.cmp, *desde)
-	abb.iterar(*inicio, visitar, true, desde, hasta)
+	abb.iterar(abb.raiz, visitar, true, desde, hasta)
 }
 
 type iterAbb[K comparable, V any] struct {
@@ -167,11 +160,14 @@ func (iter *iterAbb[K, V]) apilarHastaPrimero(nodo *nodoAbb[K, V], desde, hasta 
 		return
 	}
 
-	if desde == nil && hasta == nil || iter.abb.cmp(nodo.clave, *desde) >= 0 && iter.abb.cmp(nodo.clave, *hasta) < 0 {
+	rangoInicio := desde == nil || iter.abb.cmp(nodo.clave, *desde) >= 0
+	rangoFin := hasta == nil || iter.abb.cmp(nodo.clave, *hasta) <= 0
+
+	if rangoInicio && rangoFin {
 		iter.pila.Apilar(nodo)
 	}
 
-	if desde != nil && iter.abb.cmp(nodo.clave, *desde) > 0 {
+	if rangoInicio {
 		iter.apilarHastaPrimero(nodo.izq, desde, hasta)
 	} else {
 		iter.apilarHastaPrimero(nodo.der, desde, hasta)
@@ -184,17 +180,17 @@ func (iter *iterAbb[K, V]) apilarIzqRec(nodo *nodoAbb[K, V], hasta *K) {
 	}
 
 	if hasta != nil {
-		if iter.abb.cmp(nodo.clave, *iter.hasta) <= 0 {
+		if iter.abb.cmp(nodo.clave, *hasta) <= 0 {
 			iter.pila.Apilar(nodo)
 		}
-		if nodo.izq == nil || iter.abb.cmp(nodo.izq.clave, *iter.hasta) <= 0 {
+		if nodo.izq == nil || iter.abb.cmp(nodo.izq.clave, *hasta) <= 0 {
 			iter.apilarIzqRec(nodo.izq, hasta)
 		}
 		return
 	}
 
-	iter.apilarIzqRec(nodo.izq, hasta)
 	iter.pila.Apilar(nodo)
+	iter.apilarIzqRec(nodo.izq, hasta)
 
 }
 
