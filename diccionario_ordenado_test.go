@@ -14,6 +14,8 @@ const (
 	_VOLUMEN_GRANDE = 10000
 )
 
+var TAMS_VOLUMEN_ORDENADO = []int{12500, 25000, 50000, 100000, 200000, 400000}
+
 var funcionCmpInts = func(a, b int) int {
 	if a < b {
 		return -1
@@ -327,6 +329,15 @@ func TestGuardarYBorrarRepetidasVecesOrdenado(t *testing.T) {
 	}
 }
 
+func buscarOrdenado(clave string, claves []string) int {
+	for i, c := range claves {
+		if c == clave {
+			return i
+		}
+	}
+	return -1
+}
+
 func TestIteradorInternoOrdenadoClaves(t *testing.T) {
 	t.Log("Valida que todas las claves sean recorridas (y una única vez) con el iterador interno")
 	clave1 := "Gato"
@@ -349,9 +360,9 @@ func TestIteradorInternoOrdenadoClaves(t *testing.T) {
 	})
 
 	require.EqualValues(t, 3, cantidad)
-	require.NotEqualValues(t, -1, buscar(cs[0], claves))
-	require.NotEqualValues(t, -1, buscar(cs[1], claves))
-	require.NotEqualValues(t, -1, buscar(cs[2], claves))
+	require.NotEqualValues(t, -1, buscarOrdenado(cs[0], claves))
+	require.NotEqualValues(t, -1, buscarOrdenado(cs[1], claves))
+	require.NotEqualValues(t, -1, buscarOrdenado(cs[2], claves))
 	require.NotEqualValues(t, cs[0], cs[1])
 	require.NotEqualValues(t, cs[0], cs[2])
 	require.NotEqualValues(t, cs[2], cs[1])
@@ -565,7 +576,7 @@ func BenchmarkDiccionarioOrdenado(b *testing.B) {
 		"ejecutando muchas veces las pruebas para generar un benchmark. Valida que la cantidad " +
 		"sea la adecuada. Luego validamos que podemos obtener y ver si pertenece cada una de las claves geeneradas, " +
 		"y que luego podemos borrar sin problemas")
-	for _, n := range TAMS_VOLUMEN {
+	for _, n := range TAMS_VOLUMEN_ORDENADO {
 		b.Run(fmt.Sprintf("Prueba %d elementos", n), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				ejecutarPruebaVolumenOrdenado(b, n)
@@ -602,19 +613,19 @@ func TestDiccionarioOrdenadoIterar(t *testing.T) {
 
 	require.True(t, iter.HaySiguiente())
 	primero, _ := iter.VerActual()
-	require.NotEqualValues(t, -1, buscar(primero, claves))
+	require.NotEqualValues(t, -1, buscarOrdenado(primero, claves))
 
 	iter.Siguiente()
 	segundo, segundo_valor := iter.VerActual()
-	require.NotEqualValues(t, -1, buscar(segundo, claves))
-	require.EqualValues(t, valores[buscar(segundo, claves)], segundo_valor)
+	require.NotEqualValues(t, -1, buscarOrdenado(segundo, claves))
+	require.EqualValues(t, valores[buscarOrdenado(segundo, claves)], segundo_valor)
 	require.NotEqualValues(t, primero, segundo)
 	require.True(t, iter.HaySiguiente())
 
 	iter.Siguiente()
 	require.True(t, iter.HaySiguiente())
 	tercero, _ := iter.VerActual()
-	require.NotEqualValues(t, -1, buscar(tercero, claves))
+	require.NotEqualValues(t, -1, buscarOrdenado(tercero, claves))
 	require.NotEqualValues(t, primero, tercero)
 	require.NotEqualValues(t, segundo, tercero)
 	iter.Siguiente()
@@ -749,9 +760,9 @@ func TestIteradorOrdenadoNoLlegaAlFinal(t *testing.T) {
 	require.NotEqualValues(t, primero, segundo)
 	require.NotEqualValues(t, tercero, segundo)
 	require.NotEqualValues(t, primero, tercero)
-	require.NotEqualValues(t, -1, buscar(primero, claves))
-	require.NotEqualValues(t, -1, buscar(segundo, claves))
-	require.NotEqualValues(t, -1, buscar(tercero, claves))
+	require.NotEqualValues(t, -1, buscarOrdenado(primero, claves))
+	require.NotEqualValues(t, -1, buscarOrdenado(segundo, claves))
+	require.NotEqualValues(t, -1, buscarOrdenado(tercero, claves))
 }
 
 func TestPruebaIterarOrdenadoTrasBorrados(t *testing.T) {
@@ -845,7 +856,7 @@ func BenchmarkIteradorOrdenado(b *testing.B) {
 	b.Log("Prueba de stress del Iterador del Diccionario. Prueba guardando distinta cantidad de elementos " +
 		"(muy grandes) b.N elementos, iterarlos todos sin problemas. Se ejecuta cada prueba b.N veces para generar " +
 		"un benchmark")
-	for _, n := range TAMS_VOLUMEN {
+	for _, n := range TAMS_VOLUMEN_ORDENADO {
 		b.Run(fmt.Sprintf("Prueba %d elementos", n), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				ejecutarPruebasVolumenIteradorOrdenado(b, n)

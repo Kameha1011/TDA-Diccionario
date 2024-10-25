@@ -178,24 +178,15 @@ func (iter *iterAbb[K, V]) apilarIzqRec(nodo *nodoAbb[K, V], hasta *K) {
 	if nodo == nil {
 		return
 	}
-
-	if hasta != nil {
-		if iter.abb.cmp(nodo.clave, *hasta) <= 0 {
-			iter.pila.Apilar(nodo)
-		}
-		if nodo.izq == nil || iter.abb.cmp(nodo.izq.clave, *hasta) <= 0 {
-			iter.apilarIzqRec(nodo.izq, hasta)
-		}
-		return
+	if hasta == nil || iter.abb.cmp(nodo.clave, *hasta) <= 0 {
+		iter.pila.Apilar(nodo)
 	}
-
-	iter.pila.Apilar(nodo)
 	iter.apilarIzqRec(nodo.izq, hasta)
 
 }
 
 func (abb *abb[K, V]) Iterador() IterDiccionario[K, V] {
-	return crearIteradorAbb(abb, nil, nil)
+	return abb.IteradorRango(nil, nil)
 }
 
 func (iter *iterAbb[K, V]) Siguiente() {
