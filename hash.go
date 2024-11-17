@@ -80,7 +80,7 @@ func buscar[K comparable, V any](tabla []celdaHash[K, V], tam int, clave K) (int
 
 	i := 1
 
-	for parDatoValor.estado != _VACIO {
+	for parDatoValor.estado != _VACIO && i < tam {
 		indice = (indice + i) % tam
 		parDatoValor = tabla[indice]
 		if parDatoValor.clave == clave && parDatoValor.estado == _OCUPADO {
